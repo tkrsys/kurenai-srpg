@@ -53,7 +53,11 @@
   /* 会話・結果オーバーレイ */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:16px;}
   #dlgBox{width:100%;max-width:720px;background:rgba(20,22,32,.96);border:2px solid var(--accent);border-radius:8px;padding:14px 16px;display:flex;gap:14px;cursor:pointer;min-height:120px;}
-  #dlgFace{width:64px;height:64px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:bold;color:#fff;}
+  #dlgFace{width:96px;height:96px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:bold;color:#fff;overflow:hidden;}
+  #dlgFace img,.portrait img{width:100%;height:100%;object-fit:cover;display:block;}
+  /* ユニット情報の顔グラフィック */
+  .unitHead{display:flex;gap:10px;align-items:center;margin-bottom:4px;}
+  .portrait{width:56px;height:56px;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:bold;color:#fff;overflow:hidden;border:1px solid rgba(255,255,255,.15);}
   #dlgName{font-weight:bold;color:var(--accent);margin-bottom:6px;}
   #dlgText{line-height:1.7;font-size:15px;}
   #dlgHint{color:var(--muted);font-size:12px;text-align:right;margin-top:6px;}
@@ -156,32 +160,36 @@ const WEAPONS = {
 
 const STAT_LABEL = { hp:'HP', str:'力', mag:'魔力', skl:'技', spd:'速さ', lck:'幸運', def:'守備', res:'魔防', mov:'移動' };
 
-// ユニット定義（team: player / enemy、ai: aggressive / defensive / boss）
+// 顔グラフィック: img/portraits/<portrait>.png を読み込む（無ければ記号マークで代替）
+const PORTRAIT_DIR = 'img/portraits/';
+const PORTRAITS = {};   // 読み込み済み画像（キー: portrait 名）
+
+// ユニット定義（team: player / enemy、ai: aggressive / defensive / boss、portrait: 顔グラフィック名）
 const UNIT_DEFS = [
   // ---- 自軍 ----
-  { id:'ars',   name:'アルス', cls:'ロード',       glyph:'主', team:'player', x:3, y:8, lv:1, maxHp:22, str:7,  mag:1, skl:8,  spd:9, lck:6, def:6, res:2, mov:5, weapon:'regnaSword', lord:true, color:'#3b6fd1',
+  { id:'ars',   portrait:'ars',   name:'アルス', cls:'ロード',       glyph:'主', team:'player', x:3, y:8, lv:1, maxHp:22, str:7,  mag:1, skl:8,  spd:9, lck:6, def:6, res:2, mov:5, weapon:'regnaSword', lord:true, color:'#3b6fd1',
     growth:{hp:60,str:45,mag:10,skl:50,spd:55,lck:50,def:30,res:25} },
-  { id:'gald',  name:'ガルド', cls:'ソシアルナイト', glyph:'騎', team:'player', x:3, y:7, lv:3, maxHp:26, str:9,  mag:0, skl:6,  spd:7, lck:3, def:8, res:1, mov:7, weapon:'ironLance', horse:true, color:'#3b6fd1',
+  { id:'gald',  portrait:'gald',  name:'ガルド', cls:'ソシアルナイト', glyph:'騎', team:'player', x:3, y:7, lv:3, maxHp:26, str:9,  mag:0, skl:6,  spd:7, lck:3, def:8, res:1, mov:7, weapon:'ironLance', horse:true, color:'#3b6fd1',
     growth:{hp:70,str:40,mag:5,skl:35,spd:30,lck:25,def:40,res:15} },
-  { id:'lina',  name:'リーナ', cls:'アーチャー',   glyph:'弓', team:'player', x:2, y:7, lv:2, maxHp:19, str:6,  mag:0, skl:10, spd:8, lck:5, def:4, res:3, mov:5, weapon:'ironBow', color:'#3b6fd1',
+  { id:'lina',  portrait:'lina',  name:'リーナ', cls:'アーチャー',   glyph:'弓', team:'player', x:2, y:7, lv:2, maxHp:19, str:6,  mag:0, skl:10, spd:8, lck:5, def:4, res:3, mov:5, weapon:'ironBow', color:'#3b6fd1',
     growth:{hp:55,str:40,mag:10,skl:60,spd:50,lck:40,def:20,res:25} },
-  { id:'bern',  name:'ベルン', cls:'ファイター',   glyph:'斧', team:'player', x:3, y:9, lv:2, maxHp:28, str:11, mag:0, skl:5,  spd:5, lck:2, def:5, res:0, mov:5, weapon:'ironAxe', color:'#3b6fd1',
+  { id:'bern',  portrait:'bern',  name:'ベルン', cls:'ファイター',   glyph:'斧', team:'player', x:3, y:9, lv:2, maxHp:28, str:11, mag:0, skl:5,  spd:5, lck:2, def:5, res:0, mov:5, weapon:'ironAxe', color:'#3b6fd1',
     growth:{hp:80,str:60,mag:0,skl:30,spd:30,lck:20,def:30,res:10} },
-  { id:'celia', name:'セリア', cls:'マージ',       glyph:'魔', team:'player', x:2, y:9, lv:2, maxHp:17, str:2,  mag:8, skl:7,  spd:7, lck:4, def:2, res:7, mov:5, weapon:'fire', color:'#3b6fd1',
+  { id:'celia', portrait:'celia', name:'セリア', cls:'マージ',       glyph:'魔', team:'player', x:2, y:9, lv:2, maxHp:17, str:2,  mag:8, skl:7,  spd:7, lck:4, def:2, res:7, mov:5, weapon:'fire', color:'#3b6fd1',
     growth:{hp:45,str:5,mag:60,skl:45,spd:45,lck:35,def:15,res:50} },
-  { id:'mira',  name:'ミラ',   cls:'シスター',     glyph:'杖', team:'player', x:1, y:8, lv:1, maxHp:16, str:1,  mag:6, skl:5,  spd:6, lck:8, def:1, res:6, mov:5, weapon:'heal', color:'#3b6fd1',
+  { id:'mira',  portrait:'mira',  name:'ミラ',   cls:'シスター',     glyph:'杖', team:'player', x:1, y:8, lv:1, maxHp:16, str:1,  mag:6, skl:5,  spd:6, lck:8, def:1, res:6, mov:5, weapon:'heal', color:'#3b6fd1',
     growth:{hp:50,str:5,mag:55,skl:40,spd:40,lck:60,def:10,res:55} },
   // ---- 敵軍 ----
-  { id:'e1', name:'兵士',   cls:'ソルジャー', glyph:'槍', team:'enemy', x:10, y:6, lv:2, maxHp:20, str:6, mag:0, skl:4, spd:4, lck:0, def:5, res:0, mov:4, weapon:'ironLance', ai:'aggressive', color:'#c94a3b' },
-  { id:'e2', name:'戦士',   cls:'ファイター', glyph:'斧', team:'enemy', x:9,  y:4, lv:3, maxHp:24, str:8, mag:0, skl:3, spd:3, lck:0, def:4, res:0, mov:5, weapon:'ironAxe',   ai:'aggressive', color:'#c94a3b' },
-  { id:'e3', name:'騎士',   cls:'ソシアルナイト', glyph:'騎', team:'enemy', x:15, y:5, lv:4, maxHp:24, str:8, mag:0, skl:5, spd:6, lck:1, def:7, res:1, mov:7, weapon:'ironLance', horse:true, ai:'aggressive', color:'#c94a3b' },
-  { id:'e4', name:'兵士',   cls:'ソルジャー', glyph:'槍', team:'enemy', x:11, y:9, lv:2, maxHp:20, str:6, mag:0, skl:4, spd:4, lck:0, def:5, res:0, mov:4, weapon:'ironLance', ai:'defensive', color:'#c94a3b' },
-  { id:'e5', name:'弓兵',   cls:'アーチャー', glyph:'弓', team:'enemy', x:12, y:7, lv:2, maxHp:18, str:5, mag:0, skl:6, spd:5, lck:0, def:3, res:0, mov:5, weapon:'ironBow',   ai:'defensive', color:'#c94a3b' },
-  { id:'e6', name:'魔道士', cls:'マージ',     glyph:'魔', team:'enemy', x:13, y:5, lv:3, maxHp:18, str:2, mag:7, skl:5, spd:6, lck:1, def:2, res:5, mov:5, weapon:'thunder',   ai:'defensive', color:'#c94a3b' },
-  { id:'e7', name:'戦士',   cls:'ファイター', glyph:'斧', team:'enemy', x:15, y:8, lv:3, maxHp:24, str:8, mag:0, skl:3, spd:3, lck:0, def:4, res:0, mov:5, weapon:'ironAxe',   ai:'defensive', color:'#c94a3b' },
-  { id:'e8', name:'兵士',   cls:'ソルジャー', glyph:'槍', team:'enemy', x:12, y:2, lv:3, maxHp:22, str:7, mag:0, skl:4, spd:4, lck:0, def:6, res:0, mov:4, weapon:'ironLance', ai:'defensive', color:'#c94a3b' },
-  { id:'e9', name:'弓兵',   cls:'アーチャー', glyph:'弓', team:'enemy', x:11, y:1, lv:3, maxHp:19, str:6, mag:0, skl:7, spd:5, lck:0, def:3, res:0, mov:5, weapon:'ironBow',   ai:'defensive', color:'#c94a3b' },
-  { id:'boss', name:'ヴォルグ', cls:'ジェネラル', glyph:'将', team:'enemy', x:12, y:1, lv:8, maxHp:32, str:12, mag:0, skl:8, spd:5, lck:3, def:11, res:3, mov:4, weapon:'silverLance', ai:'boss', boss:true, color:'#8e1f2f' },
+  { id:'e1', portrait:'soldier', name:'兵士',   cls:'ソルジャー', glyph:'槍', team:'enemy', x:10, y:6, lv:2, maxHp:20, str:6, mag:0, skl:4, spd:4, lck:0, def:5, res:0, mov:4, weapon:'ironLance', ai:'aggressive', color:'#c94a3b' },
+  { id:'e2', portrait:'fighter', name:'戦士',   cls:'ファイター', glyph:'斧', team:'enemy', x:9,  y:4, lv:3, maxHp:24, str:8, mag:0, skl:3, spd:3, lck:0, def:4, res:0, mov:5, weapon:'ironAxe',   ai:'aggressive', color:'#c94a3b' },
+  { id:'e3', portrait:'knight', name:'騎士',   cls:'ソシアルナイト', glyph:'騎', team:'enemy', x:15, y:5, lv:4, maxHp:24, str:8, mag:0, skl:5, spd:6, lck:1, def:7, res:1, mov:7, weapon:'ironLance', horse:true, ai:'aggressive', color:'#c94a3b' },
+  { id:'e4', portrait:'soldier', name:'兵士',   cls:'ソルジャー', glyph:'槍', team:'enemy', x:11, y:9, lv:2, maxHp:20, str:6, mag:0, skl:4, spd:4, lck:0, def:5, res:0, mov:4, weapon:'ironLance', ai:'defensive', color:'#c94a3b' },
+  { id:'e5', portrait:'archer', name:'弓兵',   cls:'アーチャー', glyph:'弓', team:'enemy', x:12, y:7, lv:2, maxHp:18, str:5, mag:0, skl:6, spd:5, lck:0, def:3, res:0, mov:5, weapon:'ironBow',   ai:'defensive', color:'#c94a3b' },
+  { id:'e6', portrait:'mage', name:'魔道士', cls:'マージ',     glyph:'魔', team:'enemy', x:13, y:5, lv:3, maxHp:18, str:2, mag:7, skl:5, spd:6, lck:1, def:2, res:5, mov:5, weapon:'thunder',   ai:'defensive', color:'#c94a3b' },
+  { id:'e7', portrait:'fighter', name:'戦士',   cls:'ファイター', glyph:'斧', team:'enemy', x:15, y:8, lv:3, maxHp:24, str:8, mag:0, skl:3, spd:3, lck:0, def:4, res:0, mov:5, weapon:'ironAxe',   ai:'defensive', color:'#c94a3b' },
+  { id:'e8', portrait:'soldier', name:'兵士',   cls:'ソルジャー', glyph:'槍', team:'enemy', x:12, y:2, lv:3, maxHp:22, str:7, mag:0, skl:4, spd:4, lck:0, def:6, res:0, mov:4, weapon:'ironLance', ai:'defensive', color:'#c94a3b' },
+  { id:'e9', portrait:'archer', name:'弓兵',   cls:'アーチャー', glyph:'弓', team:'enemy', x:11, y:1, lv:3, maxHp:19, str:6, mag:0, skl:7, spd:5, lck:0, def:3, res:0, mov:5, weapon:'ironBow',   ai:'defensive', color:'#c94a3b' },
+  { id:'boss', portrait:'volg', name:'ヴォルグ', cls:'ジェネラル', glyph:'将', team:'enemy', x:12, y:1, lv:8, maxHp:32, str:12, mag:0, skl:8, spd:5, lck:3, def:11, res:3, mov:4, weapon:'silverLance', ai:'boss', boss:true, color:'#8e1f2f' },
 ];
 
 // 会話
@@ -745,7 +753,7 @@ function renderDialog() {
   const l = dlgLines[dlgIdx];
   const u = UNIT_DEFS.find(d => d.name === l.who);
   const face = document.getElementById('dlgFace');
-  face.textContent = u ? u.glyph : '…';
+  face.innerHTML = u ? portraitHtml(u) : '…';
   face.style.background = u ? u.color : '#555';
   document.getElementById('dlgName').textContent = l.who;
   document.getElementById('dlgText').textContent = l.text;
@@ -755,6 +763,19 @@ dlgEl.addEventListener('click', () => {
   if (dlgIdx >= dlgLines.length) { dlgEl.classList.add('hidden'); const r = dlgResolve; dlgResolve = null; r && r(); }
   else renderDialog();
 });
+// 顔グラフィックの HTML（画像が読み込めていれば <img>、無ければ記号マーク）
+function portraitHtml(u) {
+  const img = PORTRAITS[u.portrait];
+  return img ? `<img src="${img.src}" alt="${u.name}">` : u.glyph;
+}
+// 起動時に全キャラの顔グラフィックを読み込む（存在しないものは無視）
+function loadPortraits() {
+  for (const key of new Set(UNIT_DEFS.map(d => d.portrait).filter(Boolean))) {
+    const img = new Image();
+    img.onload = () => { PORTRAITS[key] = img; updatePanel(); if (!dlgEl.classList.contains('hidden')) renderDialog(); };
+    img.src = `${PORTRAIT_DIR}${key}.png`;
+  }
+}
 function showResult(title, html) {
   document.getElementById('resTitle').textContent = title;
   document.getElementById('resText').innerHTML = html;
@@ -788,7 +809,10 @@ function updatePanel() {
     const w = WEAPONS[u.weapon];
     const pct = Math.round(u.hp / u.maxHp * 100);
     body.innerHTML = `
-      <div class="name" style="color:${u.team==='player'?'#8fb3ff':'#ff9a8f'}">${u.name}<small>${u.cls} Lv${u.lv}</small></div>
+      <div class="unitHead">
+        <div class="portrait" style="background:${u.color}">${portraitHtml(u)}</div>
+        <div class="name" style="color:${u.team==='player'?'#8fb3ff':'#ff9a8f'}">${u.name}<small>${u.cls} Lv${u.lv}</small></div>
+      </div>
       <div class="hpbar"><div style="width:${pct}%;background:${pct>50?'var(--green)':pct>25?'#e0a030':'var(--red)'}"></div></div>
       <div>HP ${u.hp}/${u.maxHp}${u.team==='player' ? ` <span style="color:var(--muted)">EXP ${u.exp}/100</span>` : ''}</div>
       <div class="stats">
@@ -942,6 +966,7 @@ function render() {
 
 // ===================== 開始 =====================
 (async function main() {
+  loadPortraits();
   updatePanel();
   requestAnimationFrame(render);
   state.busy = true;
