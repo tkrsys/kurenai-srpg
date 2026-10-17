@@ -768,12 +768,14 @@ function portraitHtml(u) {
   const img = PORTRAITS[u.portrait];
   return img ? `<img src="${img.src}" alt="${u.name}">` : u.glyph;
 }
-// 起動時に全キャラの顔グラフィックを読み込む（存在しないものは無視）
+// 起動時に全キャラの顔グラフィックを読み込む（PNG → SVG の順に試し、無ければ記号マークのまま）
 function loadPortraits() {
   for (const key of new Set(UNIT_DEFS.map(d => d.portrait).filter(Boolean))) {
+    const exts = ['png', 'svg'];
     const img = new Image();
     img.onload = () => { PORTRAITS[key] = img; updatePanel(); if (!dlgEl.classList.contains('hidden')) renderDialog(); };
-    img.src = `${PORTRAIT_DIR}${key}.png`;
+    img.onerror = () => { const ext = exts.shift(); if (ext) img.src = `${PORTRAIT_DIR}${key}.${ext}`; };
+    img.src = `${PORTRAIT_DIR}${key}.${exts.shift()}`;
   }
 }
 function showResult(title, html) {

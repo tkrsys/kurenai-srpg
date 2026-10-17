@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>顔グラフィック一覧（確認用）</title>
+<style>
+  body{background:#15171f;color:#ecedf2;font-family:"Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;padding:16px;}
+  h1{font-size:16px;color:#d4af37;}
+  .grid{display:flex;flex-wrap:wrap;gap:14px;}
+  .cell{text-align:center;font-size:12px;}
+  .cell img{display:block;width:144px;height:144px;image-rendering:pixelated;border:1px solid #444;border-radius:6px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<h1>顔グラフィック一覧（img/portraits/*.svg を 1.5 倍表示）</h1>
+<div class="grid" id="grid"></div>
+<script>
+  // 表示するキャラ一覧（tools/make_portraits.py と合わせる）
+  const NAMES = ['ars','gald','lina','bern','celia','mira','volg','soldier','fighter','knight','archer','mage'];
+  const grid = document.getElementById('grid');
+  for (const n of NAMES) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.innerHTML = `<img src="../img/portraits/${n}.svg" alt="${n}">${n}`;
+    grid.appendChild(cell);
+  }
+</script>
+</body>
+</html>
